@@ -1,6 +1,7 @@
 import { Translator, languages } from "google-translate-api-x";
 
 import type { TranslatorAdapter, TranslatorProps } from "../types";
+import GoogleWorker from "./google.worker?worker&inline";
 
 type GoogleLang = keyof typeof languages;
 
@@ -9,9 +10,13 @@ type GoogleLang = keyof typeof languages;
 
 export class GoogleAdapter implements TranslatorAdapter<GoogleLang> {
   protected translator: Translator;
+  protected worker = new GoogleWorker();
 
   constructor(opts?: ConstructorParameters<typeof Translator>[0]) {
-    this.translator = new Translator(opts ?? {});
+    this.translator = new Translator({
+      ...(opts ?? {}),
+      requestFunction: this.request.bind(this),
+    });
   }
 
   translate(
@@ -36,5 +41,20 @@ export class GoogleAdapter implements TranslatorAdapter<GoogleLang> {
       return res.map((x) => x.text);
     }
     return res.text;
+  }
+
+  protected async request(
+    input: RequestInfo | URL,
+    init?: RequestInit
+  ): Promise<Response> {
+    return new Promise<Response>((resolve, reject) => {
+      this.worker.addEventListener("message", (event: MessageEvent) => {
+        const res = event.data as Response | Error;
+        debugger;
+        if (!(res instanceof Response)) reject(res);
+        else resolve(res);
+      });
+      this.worker.postMessage([input, init]);
+    });
   }
 }

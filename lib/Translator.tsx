@@ -16,12 +16,7 @@ import type { TranslatorProps } from "./types";
 // import Translation from './helpers/Translation';
 // import TranslationInputImg from './helpers/TranslationInputImage';
 
-export function Translator({
-  children,
-  from,
-  to,
-  batch,
-}: PropsWithChildren & Partial<TranslatorProps>) {
+export function Translator({}: PropsWithChildren & Partial<TranslatorProps>) {
   //  memoised to eliminate unnecessary re-renders
   // const translatedChildren = useMemo(() => (
   //   recursivelyTranslate(

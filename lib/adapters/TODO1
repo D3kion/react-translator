@@ -1,0 +1,119 @@
+type TranslationJob = {
+  texts: string[];
+  from: string;
+  to: string;
+  resolve: (value: string[] | null) => void;
+};
+
+class TranslatorService {
+  private cache = new Map<string, Promise<string | string[] | null>>();
+  private batcher: Batcher;
+
+  constructor(private config: Config) {
+    this.batcher = new Batcher(
+      this.config.maxBatchSize ?? 20,
+      this.translateBatch.bind(this)
+    );
+  }
+
+  async translate(
+    text: string | string[],
+    opts?: TranslatorProps<GoogleLang>
+  ): Promise<string | string[] | null> {
+    const normalizedFrom = opts?.from ?? this.config.from;
+    const normalizedTo = opts?.to ?? this.config.to;
+
+    if (Array.isArray(text)) {
+      return Promise.all(
+        text.map((t) => this.translateSingle(t, normalizedFrom, normalizedTo))
+      );
+    } else {
+      return this.translateSingle(text, normalizedFrom, normalizedTo);
+    }
+  }
+
+  private async translateSingle(
+    text: string,
+    from: string,
+    to: string
+  ): Promise<string | null> {
+    const key = this.getCacheKey(text, from, to);
+
+    if (this.cache.has(key)) {
+      return this.cache.get(key)! as Promise<string | null>;
+    }
+
+    const chunkedTexts = this.splitTextIntoChunks(text);
+    if (chunkedTexts.length === 1) {
+      // Simple case: single chunk
+      const promise = this.batcher
+        .add(text, from, to)
+        .then((res) => res?.[0] ?? null);
+      this.cache.set(key, promise);
+      return promise;
+    }
+
+    // Multi-chunk case
+    const promises = chunkedTexts.map((chunk) =>
+      this.batcher.add(chunk, from, to).then((res) => res?.[0] ?? "")
+    );
+
+    const translatedChunks = await Promise.all(promises);
+    const fullTranslation = translatedChunks.join(" ");
+    this.cache.set(key, Promise.resolve(fullTranslation));
+
+    return fullTranslation;
+  }
+
+  private getCacheKey(text: string, from: string, to: string): string {
+    return `${from}:${to}:${text}`;
+  }
+
+  private splitTextIntoChunks(
+    text: string,
+    maxChunkLength: number = 500
+  ): string[] {
+    const words = text.match(/\b\S+\b|\S/g) || [];
+    const chunks: string[] = [];
+    let current = "";
+
+    for (const word of words) {
+      if ((current + word).length > maxChunkLength) {
+        chunks.push(current.trim());
+        current = word + " ";
+      } else {
+        current += word + " ";
+      }
+    }
+
+    if (current.trim()) chunks.push(current.trim());
+    return chunks;
+  }
+
+  private async translateBatch(job: TranslationJob): Promise<string[] | null> {
+    try {
+      const res = await fetch(this.config.baseURL + "/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: job.texts,
+          from: job.from,
+          to: job.to,
+        }),
+      });
+
+      const data = (await res.json()) as { text: string } | { text: string }[];
+
+      if (Array.isArray(data)) {
+        return data.map((x) => x.text);
+      } else if (data && typeof data === "object") {
+        return [data.text];
+      }
+
+      return null;
+    } catch (err) {
+      console.error("Translation error:", err);
+      return null;
+    }
+  }
+}

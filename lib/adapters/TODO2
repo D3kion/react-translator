@@ -1,0 +1,67 @@
+class Batcher {
+  private queue: {
+    id: string;
+    texts: string[];
+    from: string;
+    to: string;
+    resolve: (value: string[] | null) => void;
+  }[] = [];
+
+  private timer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(private batchSize: number, private handler: (job: TranslationJob) => Promise<string[] | null>) {}
+
+  add(text: string, from: string, to: string): Promise<string[] | null> {
+    const id = this.generateId(text, from, to);
+    const existing = this.queue.find((item) => item.id === id);
+
+    if (existing) {
+      return new Promise((resolve) => {
+        existing.resolve = resolve;
+      });
+    }
+
+    return new Promise((resolve) => {
+      this.queue.push({ id, texts: [text], from, to, resolve });
+
+      if (!this.timer) {
+        this.timer = setTimeout(() => {
+          this.flush();
+        }, 100); // flush after 100ms delay
+      }
+
+      if (this.queue.length >= this.batchSize) {
+        this.flush();
+      }
+    });
+  }
+
+  private generateId(text: string, from: string, to: string): string {
+    return `${from}:${to}:${text}`;
+  }
+
+  private flush() {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+
+    while (this.queue.length > 0) {
+      const group = this.queue.splice(0, this.batchSize);
+      const first = group[0];
+
+      const job: TranslationJob = {
+        texts: group.flatMap((g) => g.texts),
+        from: first.from,
+        to: first.to,
+        resolve: (result) => {
+          group.forEach((item, index) => {
+            item.resolve(result ? [result[index]] : null);
+          });
+        },
+      };
+
+      this.handler(job).then(job.resolve);
+    }
+  }
+}

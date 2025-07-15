@@ -10,8 +10,7 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Home() {
   return (
-    <main>
-      <h1>React Translator example</h1>
+    <main className="container mx-auto pt-16 pb-24">
       <TranslatorExample />
     </main>
   );

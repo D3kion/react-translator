@@ -4,26 +4,33 @@ import { TranslatorProvider } from "react-translator";
 import { GoogleAdapter } from "react-translator/adapters";
 
 import { InlineTranslator } from "./inline";
+import { HookTranslator } from "./hook";
 
 export function TranslatorExample() {
   return (
     <TranslatorProvider
-      batch={false}
       adapter={
         new GoogleAdapter({
-          rejectOnPartialFail: false,
-          // forceBatch: false,
+          baseURL: "http://localhost:3000",
+          from: "en",
+          to: "ru",
         })
       }
     >
-      <section>
-        <h2>Inline translator</h2>
+      <section className="pb-4">
+        <h2 className="py-2 text-2xl font-semibold">Hook translator</h2>
+        <HookTranslator />
+      </section>
+      <hr className="my-2" />
+      <section className="pb-4">
+        <h2 className="py-2 text-2xl font-semibold">Inline translator</h2>
         <InlineTranslator />
       </section>
-      {/* <section>
-        <h2>Document translator</h2>
-        <DocumentTranslator />
-      </section> */}
+      <hr className="my-2" />
+      <section className="pb-4">
+        <h2 className="py-2 text-2xl font-semibold">Document translator</h2>
+        {/* <DocumentTranslator /> */}
+      </section>
     </TranslatorProvider>
   );
 }

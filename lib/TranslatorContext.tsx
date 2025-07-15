@@ -26,14 +26,16 @@ export function TranslatorProvider<
   to = detectBrowserLanguage(),
   batch = true,
   adapter,
-}: PropsWithChildren & Partial<TranslatorContextProps<Adapter>>) {
+}: PropsWithChildren &
+  Partial<Omit<TranslatorContextProps<Adapter>, "adapter">> &
+  Pick<TranslatorContextProps<Adapter>, "adapter">) {
   return (
     <TranslatorContext.Provider
       value={{
         from,
         to,
         batch,
-        adapter: adapter ?? new GoogleAdapter({ from, to, forceBatch: batch }),
+        adapter,
       }}
     >
       {children}

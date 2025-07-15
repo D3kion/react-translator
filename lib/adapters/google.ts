@@ -1,23 +1,21 @@
-import { Translator, languages } from "google-translate-api-x";
+import { languages } from "google-translate-api-x";
 
 import type { TranslatorAdapter, TranslatorProps } from "../types";
-import GoogleWorker from "./google.worker?worker&inline";
 
-type GoogleLang = keyof typeof languages;
+export type GoogleLang = keyof typeof languages;
+export interface GoogleAdapterConfig
+  extends Omit<TranslatorProps<GoogleLang>, "batch"> {
+  /**
+   * Translation proxy url. Must implement `POST /translate ({ text: string | string[], from: string, to: string })`
+   */
+  baseURL: string;
+}
 
 // TODO: cache
 // queryKey: [sha256(`${text}-${from}-${to}`).toString()],
 
 export class GoogleAdapter implements TranslatorAdapter<GoogleLang> {
-  protected translator: Translator;
-  protected worker = new GoogleWorker();
-
-  constructor(opts?: ConstructorParameters<typeof Translator>[0]) {
-    this.translator = new Translator({
-      ...(opts ?? {}),
-      requestFunction: this.request.bind(this),
-    });
-  }
+  constructor(private config: GoogleAdapterConfig) {}
 
   translate(
     text: string,
@@ -32,29 +30,15 @@ export class GoogleAdapter implements TranslatorAdapter<GoogleLang> {
     text: string | string[],
     opts?: TranslatorProps<GoogleLang> | undefined
   ): Promise<string | string[] | null> {
-    const res = await this.translator.translate(text, {
-      from: opts?.from,
-      to: opts?.to,
-      forceBatch: opts?.batch,
+    const res = await fetch(this.config.baseURL + "/translate", {
+      method: "POST",
+      body: JSON.stringify({
+        text,
+        from: opts?.from ?? this.config.from,
+        to: opts?.to ?? this.config.to,
+      }),
     });
-    if (Array.isArray(res)) {
-      return res.map((x) => x.text);
-    }
-    return res.text;
-  }
-
-  protected async request(
-    input: RequestInfo | URL,
-    init?: RequestInit
-  ): Promise<Response> {
-    return new Promise<Response>((resolve, reject) => {
-      this.worker.addEventListener("message", (event: MessageEvent) => {
-        const res = event.data as Response | Error;
-        debugger;
-        if (!(res instanceof Response)) reject(res);
-        else resolve(res);
-      });
-      this.worker.postMessage([input, init]);
-    });
+    const data = (await res.json()) as { text: string } | { text: string }[];
+    return Array.isArray(data) ? data.map((x) => x.text) : data.text;
   }
 }

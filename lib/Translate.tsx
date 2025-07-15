@@ -14,7 +14,9 @@ export function Translate({ text, from, to, batch }: TranslateProps) {
   const [translated, setTranslated] = useState<string | null>(null);
 
   useEffect(() => {
-    translate(text).then((res) => setTranslated(res));
+    translate(text).then((res) =>
+      setTranslated(Array.isArray(res) ? res.join("") : res)
+    );
   }, [text, translate]);
 
   return translated ?? text;

@@ -3,8 +3,10 @@
 import { TranslatorProvider } from "react-translator";
 import { GoogleAdapter } from "react-translator/adapters";
 
-import { InlineTranslator } from "./inline";
 import { HookTranslator } from "./hook";
+import { InlineTranslator } from "./inline";
+import { DocumentTranslator } from "./document";
+import { HTMLTranslator } from "./html";
 
 export function TranslatorExample() {
   return (
@@ -17,7 +19,7 @@ export function TranslatorExample() {
         })
       }
     >
-      <section className="pb-4">
+      {/* <section className="pb-4">
         <h2 className="py-2 text-2xl font-semibold">Hook translator</h2>
         <HookTranslator />
       </section>
@@ -29,7 +31,11 @@ export function TranslatorExample() {
       <hr className="my-2" />
       <section className="pb-4">
         <h2 className="py-2 text-2xl font-semibold">Document translator</h2>
-        {/* <DocumentTranslator /> */}
+        <DocumentTranslator />
+      </section> */}
+      <section className="pb-4">
+        <h2 className="py-2 text-2xl font-semibold">HTML translator</h2>
+        <HTMLTranslator />
       </section>
     </TranslatorProvider>
   );

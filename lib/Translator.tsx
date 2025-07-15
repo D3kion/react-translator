@@ -1,87 +1,108 @@
-import type { PropsWithChildren } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useMemo,
+  type PropsWithChildren,
+  type ReactElement,
+  type ReactNode,
+} from "react";
+
 import type { TranslatorProps } from "./types";
+import { isVoidElement } from "./utils";
+import { Translate } from "./Translate";
 
-// import React, {
-//   JSX,
-//   useMemo,
-//   ReactNode,
-//   ReactElement,
-//   Children,
-//   cloneElement,
-//   isValidElement,
-// } from 'react';
+interface TransaltorProps extends PropsWithChildren, Partial<TranslatorProps> {}
 
-// import isVoidElement from '../utils/isVoidElement';
+export function Translator({
+  children,
+  from,
+  to,
+  batch,
+}: TransaltorProps): ReactNode {
+  const translated = useMemo(
+    () => recursivelyTranslate(children, from, to, batch),
+    [children, from, to, batch]
+  );
 
-// import Translation from './helpers/Translation';
-// import TranslationInputImg from './helpers/TranslationInputImage';
-
-export function Translator({}: PropsWithChildren & Partial<TranslatorProps>) {
-  //  memoised to eliminate unnecessary re-renders
-  // const translatedChildren = useMemo(() => (
-  //   recursivelyTranslate(
-  //     <>{children}</>,
-  //     from,
-  //     to,
-  //     shouldFallback,
-  //   )
-  // ), [children, from, to, shouldFallback]);
-
-  return "todo";
+  return translated;
 }
 
-// const recursivelyTranslate = (
-//   node: ReactNode,
-//   from?: language,
-//   to?: language,
-//   shouldFallback?: boolean,
-// ): ReactNode => {
-//   if ((typeof node === 'string' && !node)) return node;
+function recursivelyTranslate(
+  node: ReactNode,
+  from?: string,
+  to?: string,
+  batch?: boolean
+): ReactNode {
+  if (!node || Children.count(node) === 0) {
+    return node;
+  }
 
-//   if (typeof node === 'string') {
-//     return (
-//       <Translation
-//         text={node}
-//         from={from}
-//         to={to}
-//         shouldFallback={shouldFallback}
-//       />
-//     );
-//   }
+  if (typeof node === "string") {
+    if (!node.trim()) return node;
+    return <Translate text={node} from={from} to={to} batch={batch} />;
+  }
 
-//   if (Children.count(node) === 0 || isVoidElement(node) || typeof node === 'number') {
-//     return (
-//       <>
-//         &nbsp;
-//         {node}
-//         &nbsp;
-//       </>
-//     );
-//   }
+  if (
+    Children.count(node) === 0 ||
+    isVoidElement(node) ||
+    typeof node === "number" ||
+    (typeof node === "string" && Number.isFinite(+node))
+  ) {
+    return node;
+  }
 
-//   if (isValidElement(node)) {
-//     //  skip translation if functional component
-//     //  for scoping of `to` & `from` props in nested components
-//     //  (also applies to nested <Translator /> and <Translate /> wrappers)
-//     if (typeof node.type === 'function') return node;
+  if (isValidElement(node)) {
+    //  skip translation if functional component
+    //  for scoping of `to` & `from` props in nested components
+    //  (also applies to nested <Translator /> and <Translate /> wrappers)
+    if (typeof node.type === "function") {
+      return node;
+    }
 
-//     if (node.type === 'textarea' || node.type === 'input' || node.type === 'img') {
-//       return (
-//         <TranslationInputImg
-//           node={node}
-//           from={from}
-//           to={to}
-//           shouldFallback={shouldFallback}
-//         />
-//       );
-//     }
+    if (
+      node.type === "textarea" ||
+      node.type === "input" ||
+      node.type === "img"
+    ) {
+      return node;
+      // return (
+      //   <TranslationInputImg
+      //     node={node}
+      //     from={from}
+      //     to={to}
+      //     shouldFallback={shouldFallback}
+      //   />
+      // );
+    }
 
-//     return cloneElement(node as ReactElement, {
-//       children: (
-//         recursivelyTranslate(Children.toArray(node.props.children), from, to, shouldFallback)
-//       ),
-//     });
-//   }
+    const dangerHTML = (node.props as any).dangerouslySetInnerHTML as
+      | { __html: string }
+      | undefined;
+    if (dangerHTML) {
+      return (
+        <Translate
+          text={dangerHTML.__html}
+          from={from}
+          to={to}
+          batch={batch}
+          isHTML
+        />
+      );
+    }
 
-//   return Children.map(node, (child) => recursivelyTranslate(child, from, to, shouldFallback));
-// };
+    const el = node as ReactElement<PropsWithChildren>;
+    return cloneElement(el, {
+      children: recursivelyTranslate(
+        Children.toArray(el.props.children),
+        from,
+        to,
+        batch
+      ),
+    });
+  }
+
+  return Children.map(node, (child) =>
+    recursivelyTranslate(child, from, to, batch)
+  );
+}

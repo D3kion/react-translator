@@ -1,11 +1,11 @@
 import { useCallback } from "react";
 
-import type { TranslatorProps } from "./types";
+import type { TranslatorProps, TranslatorResult } from "./types";
 import { useTranslatorContext } from "./TranslatorContext";
 
 type TranslateHookFn = (
   text: string | string[]
-) => Promise<string | string[] | null>;
+) => Promise<TranslatorResult | TranslatorResult[]>;
 
 export function useTranslator({
   from,

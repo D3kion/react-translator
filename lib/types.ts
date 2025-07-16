@@ -26,19 +26,20 @@ export interface TranslatorContextProps<Adapter extends TranslatorAdapter>
   /**
    * Adapter for translation API
    *
-   * @default GoogleAdapter
+   * @default BaseAdapter
    */
   adapter: Adapter;
 }
 
+export type TranslatorResult = string | null;
 export interface TranslatorAdapter<Language = string> {
   translate(
     text: string,
     opts?: TranslatorProps<Language>
-  ): Promise<string | null>;
+  ): Promise<TranslatorResult>;
 
   translate(
     text: string[],
     opts?: TranslatorProps<Language>
-  ): Promise<string[] | null>;
+  ): Promise<TranslatorResult[]>;
 }

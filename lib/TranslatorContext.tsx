@@ -2,7 +2,7 @@ import { createContext, useContext, type PropsWithChildren } from "react";
 
 import type { TranslatorAdapter, TranslatorContextProps } from "./types";
 import { detectBrowserLanguage } from "./utils";
-import { GoogleAdapter } from "./adapters/google";
+import { BaseAdapter } from "./adapters/base";
 
 const TranslatorContext = createContext<
   TranslatorContextProps<TranslatorAdapter>
@@ -19,7 +19,7 @@ export function useTranslatorContext() {
 }
 
 export function TranslatorProvider<
-  Adapter extends TranslatorAdapter = GoogleAdapter
+  Adapter extends TranslatorAdapter = BaseAdapter
 >({
   children,
   from = "auto",
